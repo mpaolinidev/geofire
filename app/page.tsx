@@ -1,65 +1,186 @@
 import Image from "next/image";
+import Link from "next/link";
+import Header from "./_components/header";
+import Footer from "./_components/footer";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen bg-slate-950 text-slate-100">
+      <Header />
+
+      {/* HERO */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <h1 className="text-4xl font-bold tracking-tight text-slate-50 md:text-5xl">
+          GeoFire Goiás
+        </h1>
+
+        <p className="mt-4 max-w-2xl text-lg text-slate-300">
+          Uma plataforma moderna para visualização, análise temporal e previsão
+          de queimadas em Goiás. Dados oficiais diretamente do
+          <span className="text-emerald-300"> INPE – BDQueimadas</span>.
+        </p>
+
+        <div className="mt-8 flex gap-4">
+          <Link
+            href="/mapa"
+            className="rounded-lg bg-emerald-500 px-5 py-3 font-semibold text-slate-900 hover:bg-emerald-400"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Ver mapa de queimadas
+          </Link>
+          <Link
+            href="/serie-historica"
+            className="rounded-lg border border-slate-700 px-5 py-3 text-slate-200 hover:border-slate-500"
           >
-            Documentation
-          </a>
+            Explorar série histórica
+          </Link>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* MAPA – CARD DE PREVIEW */}
+      <section id="mapa" className="mx-auto max-w-6xl px-4 py-20">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="md:w-1/2">
+            <h2 className="mb-4 text-2xl font-semibold">Mapa de Queimadas</h2>
+            <p className="mb-4 text-sm text-slate-400">
+              Visualização espacial dos focos registrados em Goiás. Na página
+              dedicada você poderá interagir com o mapa, aplicar filtros por
+              período, município e bioma, e explorar áreas críticas.
+            </p>
+            <Link
+              href="/mapa"
+              className="inline-flex items-center text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+            >
+              Acessar página do mapa →
+            </Link>
+          </div>
+
+          <Link
+            href="/mapa"
+            className="group relative mt-6 block overflow-hidden rounded-xl border border-slate-800 bg-slate-900 md:mt-0 md:w-1/2"
+          >
+            <div className="relative h-64 w-full">
+              <Image
+                src="/map-preview.jpg"
+                alt="Pré-visualização do mapa de queimadas em Goiás"
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent" />
+            <div className="absolute right-4 bottom-4 left-4 flex items-center justify-between text-xs text-slate-200">
+              <span className="font-semibold">
+                Mapa interativo de queimadas
+              </span>
+              <span className="rounded-full bg-slate-900/70 px-2 py-1 text-[10px] text-emerald-300">
+                Ver detalhes
+              </span>
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      {/* SÉRIE HISTÓRICA – CARD DE PREVIEW */}
+      <section id="serie" className="mx-auto max-w-6xl px-4 py-20">
+        <div className="flex flex-col-reverse gap-4 md:flex-row md:items-center">
+          <Link
+            href="/serie-historica"
+            className="group relative mt-6 block overflow-hidden rounded-xl border border-slate-800 bg-slate-900 md:mt-0 md:w-1/2"
+          >
+            <div className="relative h-64 w-full">
+              <Image
+                src="/serie-preview.jpg"
+                alt="Pré-visualização da série histórica de queimadas"
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent" />
+            <div className="absolute right-4 bottom-4 left-4 flex items-center justify-between text-xs text-slate-200">
+              <span className="font-semibold">Série histórica 2003+</span>
+              <span className="rounded-full bg-slate-900/70 px-2 py-1 text-[10px] text-emerald-300">
+                Ver gráficos
+              </span>
+            </div>
+          </Link>
+
+          <div className="md:w-1/2">
+            <h2 className="mb-4 text-2xl font-semibold">Série Histórica</h2>
+            <p className="mb-4 text-sm text-slate-400">
+              Evolução dos focos de queimadas desde 2003. Na página dedicada
+              você verá gráficos anuais e mensais, comparações entre períodos e
+              destaque para anos com picos fora do padrão.
+            </p>
+            <Link
+              href="/serie-historica"
+              className="inline-flex items-center text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+            >
+              Acessar página da série histórica →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ANÁLISES TEMPORAIS – OVERVIEW + CTA */}
+      <section id="analises" className="mx-auto max-w-6xl px-4 py-20">
+        <h2 className="mb-4 text-2xl font-semibold">Análises Temporais</h2>
+        <p className="mb-6 max-w-2xl text-sm text-slate-400">
+          Tendência, sazonalidade e padrões das queimadas. A página de análises
+          temporais reúne métricas e interpretações construídas a partir da
+          série histórica, com foco em apoiar decisões e políticas públicas.
+        </p>
+
+        <div className="mb-6 grid gap-6 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <p className="font-semibold">Tendência</p>
+            <p className="mt-2 text-sm text-slate-400">
+              Análise se a série aponta para aumento, queda ou estabilidade dos
+              focos ao longo do tempo.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <p className="font-semibold">Sazonalidade</p>
+            <p className="mt-2 text-sm text-slate-400">
+              Identificação dos meses com maior concentração de queimadas e
+              padrões de repetição ao longo dos anos.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <p className="font-semibold">Picos e Anomalias</p>
+            <p className="mt-2 text-sm text-slate-400">
+              Destaque para períodos extremos, fora do padrão esperado,
+              auxiliando investigações detalhadas.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/analises-temporais"
+          className="inline-flex items-center text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+        >
+          Ver página de análises temporais →
+        </Link>
+      </section>
+
+      {/* PREVISÕES – CONTEXTO FUTURO */}
+      <section id="previsoes" className="mx-auto max-w-6xl px-4 py-20">
+        <h2 className="mb-4 text-2xl font-semibold">Previsões</h2>
+        <p className="mb-6 max-w-2xl text-sm text-slate-400">
+          Construção futura com modelos de aprendizado de máquina. Esta seção
+          será ampliada para incluir cenários projetados a partir do histórico
+          de queimadas e variáveis ambientais.
+        </p>
+
+        <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
+          • Baseado em históricos do INPE BDQueimadas
+          <br />
+          • Modelos ARIMA, Prophet e redes neurais (planejado)
+          <br />• Cenários futuros e projeções anual/mensal
+        </div>
+      </section>
+
+      <Footer />
+    </main>
   );
 }
