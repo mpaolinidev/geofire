@@ -4,6 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Header from "../_components/header";
 import Footer from "../_components/footer";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 // Carrega componentes do react-leaflet somente no client
 const MapContainer = dynamic(
@@ -57,6 +66,36 @@ const MapaPage = () => {
   const [mes, setMes] = useState(0); // 0 = todos os meses
   const [focos, setFocos] = useState<Foco[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const stats = useMemo(() => {
+    const totalFocos = focos.length;
+
+    // calcula número de dias no período filtrado
+    let diasPeriodo = 0;
+
+    if (mes === 0) {
+      // ano inteiro
+      const inicio = new Date(ano, 0, 1);
+      const fim = new Date(ano + 1, 0, 1);
+      const diffMs = fim.getTime() - inicio.getTime();
+      diasPeriodo = diffMs / (1000 * 60 * 60 * 24);
+    } else {
+      // mês específico
+      const inicio = new Date(ano, mes - 1, 1);
+      const fim = mes === 12 ? new Date(ano + 1, 0, 1) : new Date(ano, mes, 1);
+      const diffMs = fim.getTime() - inicio.getTime();
+      diasPeriodo = diffMs / (1000 * 60 * 60 * 24);
+    }
+
+    const mediaDiaria = diasPeriodo > 0 ? totalFocos / diasPeriodo : 0;
+
+    return {
+      totalFocos,
+      mediaDiaria,
+      diasPeriodo,
+    };
+  }, [focos, ano, mes]);
 
   const anosDisponiveis = useMemo(() => {
     const start = 2003;
@@ -93,15 +132,23 @@ const MapaPage = () => {
 
     for (const foco of focos) {
       const key =
-        foco.city && foco.city.trim() !== "" ? foco.city : "Não informado";
+        foco.city && foco.city.trim() !== ""
+          ? foco.city.trim()
+          : "Não informado";
       contagem[key] = (contagem[key] || 0) + 1;
     }
 
-    return Object.entries(contagem)
-      .map(([city, total]) => ({ city, total }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
-  }, [focos]);
+    let lista = Object.entries(contagem).map(([city, total]) => ({
+      city,
+      total,
+    }));
+
+    lista.sort((a, b) =>
+      sortDirection === "desc" ? b.total - a.total : a.total - b.total,
+    );
+
+    return lista.slice(0, 10);
+  }, [focos, sortDirection]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -164,7 +211,7 @@ const MapaPage = () => {
         </div>
 
         {/* Mapa */}
-        <div className="h-[500px] overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+        <div className="relative z-0 h-[500px] overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
           <MapContainer
             center={[-16.6, -49.3]} // centro aproximado de Goiás
             zoom={6}
@@ -217,14 +264,77 @@ const MapaPage = () => {
           </MapContainer>
         </div>
 
+        {/* CARDS DE ESTATÍSTICAS */}
+        <div className="mb-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+            <p className="text-xs font-semibold text-slate-400">
+              Total de focos no período
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-50">
+              {stats.totalFocos.toLocaleString("pt-BR")}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Considerando o ano {ano}
+              {mes === 0
+                ? " (todos os meses)."
+                : ` e o mês de ${
+                    mesesLabels.find((m) => m.value === mes)?.label ?? ""
+                  }.`}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+            <p className="text-xs font-semibold text-slate-400">
+              Média diária de focos
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-50">
+              {stats.mediaDiaria.toFixed(1).replace(".", ",")}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Média calculada sobre aproximadamente{" "}
+              {Math.round(stats.diasPeriodo)} dias no período filtrado.
+            </p>
+          </div>
+        </div>
+
         {/* Top 10 municípios */}
         <section className="mt-8">
-          <h2 className="mb-3 text-xl font-semibold">
-            Top 10 municípios com mais focos de queimadas
-          </h2>
+          <div className="mb-3 flex items-center gap-3">
+            <h2 className="text-xl font-semibold">
+              Top 10 municípios com mais focos de queimadas
+            </h2>
+
+            {topMunicipios.length > 0 && (
+              <div className="ml-auto flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Ordenar:</span>
+                <button
+                  type="button"
+                  onClick={() => setSortDirection("desc")}
+                  className={`rounded-md border px-2 py-1 ${
+                    sortDirection === "desc"
+                      ? "border-emerald-400 bg-emerald-400/10 text-emerald-300"
+                      : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  Maior → menor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortDirection("asc")}
+                  className={`rounded-md border px-2 py-1 ${
+                    sortDirection === "asc"
+                      ? "border-emerald-400 bg-emerald-400/10 text-emerald-300"
+                      : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  Menor → maior
+                </button>
+              </div>
+            )}
+          </div>
 
           <p className="mb-3 text-xs text-slate-400">
-            Lista baseada nos filtros selecionados de ano e mês.
+            Gráfico baseado nos filtros selecionados de ano e mês.
           </p>
 
           {topMunicipios.length === 0 ? (
@@ -232,40 +342,44 @@ const MapaPage = () => {
               Nenhum foco encontrado para o período selecionado.
             </p>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
-              <table className="min-w-full text-sm">
-                <thead className="border-b border-slate-800 bg-slate-900/80">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-400">
-                      #
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-400">
-                      Município
-                    </th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-400">
-                      Focos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topMunicipios.map((m, index) => (
-                    <tr
-                      key={m.city}
-                      className="border-t border-slate-800/70 hover:bg-slate-800/40"
-                    >
-                      <td className="px-4 py-2 text-xs text-slate-400">
-                        {index + 1}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-slate-100">
-                        {m.city}
-                      </td>
-                      <td className="px-4 py-2 text-right text-sm text-slate-100">
-                        {m.total}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="h-80 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topMunicipios}
+                  layout="vertical"
+                  margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  {/* Eixo Y = municípios */}
+                  <YAxis
+                    type="category"
+                    dataKey="city"
+                    width={140}
+                    tick={{ fontSize: 11, fill: "#e5e7eb" }}
+                  />
+                  {/* Eixo X = quantidade de focos */}
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: "#e5e7eb" }}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: "#020617",
+                      border: "1px solid #1f2937",
+                      borderRadius: "0.5rem",
+                      fontSize: "0.75rem",
+                      color: "#e5e7eb",
+                    }}
+                    cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                  />
+                  <Bar
+                    dataKey="total"
+                    name="Focos"
+                    radius={[0, 4, 4, 0]}
+                    fill="#4ADE80"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </section>
