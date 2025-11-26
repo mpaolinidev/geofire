@@ -1,56 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/app/generated/prisma/client";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const anoParam = searchParams.get("ano");
-    const mesParam = searchParams.get("mes");
 
-    const currentYear = new Date().getFullYear();
-    const ano = anoParam ? Number(anoParam) : currentYear - 1;
+    const ano = Number(searchParams.get("ano"));
+    const mes = Number(searchParams.get("mes"));
+    const city = searchParams.get("city");
 
-    if (Number.isNaN(ano)) {
-      return NextResponse.json(
-        { error: "Parâmetro 'ano' inválido" },
-        { status: 400 },
-      );
+    if (!ano) {
+      return NextResponse.json({ error: "Ano obrigatório" }, { status: 400 });
     }
 
-    // mes: 1..12, 0 ou null = ano inteiro
-    const mes = mesParam ? Number(mesParam) : 0;
-    if (Number.isNaN(mes) || mes < 0 || mes > 12) {
-      return NextResponse.json(
-        { error: "Parâmetro 'mes' inválido" },
-        { status: 400 },
-      );
-    }
+    const inicio = mes === 0 ? new Date(ano, 0, 1) : new Date(ano, mes - 1, 1);
+    const fim = mes === 0 ? new Date(ano + 1, 0, 1) : new Date(ano, mes, 1);
 
-    let inicio: Date;
-    let fim: Date;
-
-    if (mes === 0) {
-      // ano inteiro
-      inicio = new Date(ano, 0, 1);
-      fim = new Date(ano + 1, 0, 1);
-    } else {
-      // mês específico
-      inicio = new Date(ano, mes - 1, 1);
-      if (mes === 12) {
-        fim = new Date(ano + 1, 0, 1);
-      } else {
-        fim = new Date(ano, mes, 1);
-      }
-    }
+    // TIPAGEM CORRETA
+    const where: Prisma.QueimadasWhereInput = {
+      state: "GOIÁS",
+      data: {
+        gte: inicio,
+        lt: fim,
+      },
+      ...(city ? { city } : {}),
+    };
 
     const focos = await prisma.queimadas.findMany({
-      where: {
-        state: "GOIÁS",
-        data: {
-          gte: inicio,
-          lt: fim,
-        },
-      },
+      where,
+      orderBy: { data: "asc" },
       select: {
         id: true,
         lat: true,
@@ -59,20 +38,11 @@ export async function GET(req: Request) {
         data: true,
         biome: true,
       },
-      take: 20000,
     });
 
-    return NextResponse.json({
-      ano,
-      mes,
-      total: focos.length,
-      focos,
-    });
+    return NextResponse.json({ ano, mes, focos });
   } catch (error) {
-    console.error("Erro ao carregar dados de queimadas:", error);
-    return NextResponse.json(
-      { error: "Erro interno no servidor" },
-      { status: 500 },
-    );
+    console.error("Erro API queimadas:", error);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

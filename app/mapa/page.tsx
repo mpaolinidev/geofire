@@ -5,13 +5,13 @@ import dynamic from "next/dynamic";
 import Header from "../_components/header";
 import Footer from "../_components/footer";
 import {
-  BarChart,
-  Bar,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip as RechartsTooltip,
-  ResponsiveContainer,
 } from "recharts";
 
 // Carrega componentes do react-leaflet somente no client
@@ -34,7 +34,6 @@ const Tooltip = dynamic(() => import("react-leaflet").then((m) => m.Tooltip), {
   ssr: false,
 });
 
-// Tipo dos focos retornados pela API /api/queimadas
 type Foco = {
   id: string;
   lat: string;
@@ -65,23 +64,20 @@ const MapaPage = () => {
   const [ano, setAno] = useState(currentYear - 1);
   const [mes, setMes] = useState(0); // 0 = todos os meses
   const [focos, setFocos] = useState<Foco[]>([]);
+  const [focosAnoInteiro, setFocosAnoInteiro] = useState<Foco[]>([]);
   const [loading, setLoading] = useState(false);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const stats = useMemo(() => {
     const totalFocos = focos.length;
 
-    // calcula número de dias no período filtrado
     let diasPeriodo = 0;
 
     if (mes === 0) {
-      // ano inteiro
       const inicio = new Date(ano, 0, 1);
       const fim = new Date(ano + 1, 0, 1);
       const diffMs = fim.getTime() - inicio.getTime();
       diasPeriodo = diffMs / (1000 * 60 * 60 * 24);
     } else {
-      // mês específico
       const inicio = new Date(ano, mes - 1, 1);
       const fim = mes === 12 ? new Date(ano + 1, 0, 1) : new Date(ano, mes, 1);
       const diffMs = fim.getTime() - inicio.getTime();
@@ -106,7 +102,7 @@ const MapaPage = () => {
     return arr;
   }, [currentYear]);
 
-  // Carrega focos da API sempre que ano ou mes mudar
+  // Carrega focos da API sempre que ano ou mes mudar (período filtrado)
   useEffect(() => {
     const fetchFocos = async () => {
       setLoading(true);
@@ -123,11 +119,61 @@ const MapaPage = () => {
       }
     };
 
-    fetchFocos();
+    void fetchFocos();
   }, [ano, mes]);
 
-  // Top 10 municípios afetados pelo filtro
-  const topMunicipios = useMemo(() => {
+  // Carrega focos do ano inteiro (sempre mes=0), usados para o "mês com mais focos" e gráfico de linhas
+  useEffect(() => {
+    const fetchFocosAnoInteiro = async () => {
+      try {
+        const url = `/api/queimadas?ano=${ano}&mes=0`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setFocosAnoInteiro(data.focos ?? []);
+      } catch (err) {
+        console.error("Erro ao carregar focos do ano inteiro:", err);
+        setFocosAnoInteiro([]);
+      }
+    };
+
+    void fetchFocosAnoInteiro();
+  }, [ano]);
+
+  // Mês com maior número de focos (considerando o ano inteiro)
+  const mesComMaisFocos = useMemo(() => {
+    if (focosAnoInteiro.length === 0) return null;
+
+    const contagemPorMes: Record<number, number> = {};
+
+    for (const foco of focosAnoInteiro) {
+      const d = new Date(foco.data);
+      const mesNumero = d.getMonth() + 1; // 1..12
+      contagemPorMes[mesNumero] = (contagemPorMes[mesNumero] || 0) + 1;
+    }
+
+    let melhorMes: number | null = null;
+    let maxFocos = 0;
+
+    for (const [mesStr, total] of Object.entries(contagemPorMes)) {
+      const mesNumero = Number(mesStr);
+      if (total > maxFocos) {
+        maxFocos = total;
+        melhorMes = mesNumero;
+      }
+    }
+
+    if (melhorMes === null) return null;
+
+    return {
+      mes: melhorMes,
+      total: maxFocos,
+    };
+  }, [focosAnoInteiro]);
+
+  // Município com mais focos no período filtrado (ano + mês)
+  const municipioComMaisFocos = useMemo(() => {
+    if (focos.length === 0) return null;
+
     const contagem: Record<string, number> = {};
 
     for (const foco of focos) {
@@ -138,17 +184,44 @@ const MapaPage = () => {
       contagem[key] = (contagem[key] || 0) + 1;
     }
 
-    let lista = Object.entries(contagem).map(([city, total]) => ({
-      city,
-      total,
-    }));
+    let melhorMunicipio: string | null = null;
+    let maxFocos = 0;
 
-    lista.sort((a, b) =>
-      sortDirection === "desc" ? b.total - a.total : a.total - b.total,
-    );
+    for (const [city, total] of Object.entries(contagem)) {
+      if (total > maxFocos) {
+        maxFocos = total;
+        melhorMunicipio = city;
+      }
+    }
 
-    return lista.slice(0, 10);
-  }, [focos, sortDirection]);
+    if (!melhorMunicipio) return null;
+
+    return {
+      city: melhorMunicipio,
+      total: maxFocos,
+    };
+  }, [focos]);
+
+  // Dados mensais para o gráfico de linhas (ano inteiro)
+  const dadosMensais = useMemo(() => {
+    const contagemPorMes: Record<number, number> = {};
+
+    for (const foco of focosAnoInteiro) {
+      const d = new Date(foco.data);
+      const mesNumero = d.getMonth() + 1; // 1..12
+      contagemPorMes[mesNumero] = (contagemPorMes[mesNumero] || 0) + 1;
+    }
+
+    const dados = [];
+    for (let m = 1; m <= 12; m++) {
+      dados.push({
+        mes: m,
+        total: contagemPorMes[m] ?? 0,
+      });
+    }
+
+    return dados;
+  }, [focosAnoInteiro]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -161,8 +234,8 @@ const MapaPage = () => {
 
         <p className="mb-4 max-w-2xl text-sm text-slate-400">
           Visualização dos focos de queimadas registrados em Goiás. Utilize os
-          filtros de ano e mês para explorar diferentes períodos e, abaixo do
-          mapa, veja os municípios mais afetados.
+          filtros de ano e mês para explorar diferentes períodos e interpretar
+          os indicadores resumidos abaixo.
         </p>
 
         {/* Filtros */}
@@ -229,7 +302,7 @@ const MapaPage = () => {
               const lat = parseFloat(f.lat.trim());
               const lon = parseFloat(f.lon.trim());
 
-              if (isNaN(lat) || isNaN(lon)) return null;
+              if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
 
               return (
                 <CircleMarker
@@ -265,7 +338,8 @@ const MapaPage = () => {
         </div>
 
         {/* CARDS DE ESTATÍSTICAS */}
-        <div className="mb-4 grid gap-4 md:grid-cols-2">
+        <div className="mt-4 mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Total de focos no período */}
           <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
             <p className="text-xs font-semibold text-slate-400">
               Total de focos no período
@@ -283,6 +357,7 @@ const MapaPage = () => {
             </p>
           </div>
 
+          {/* Média diária */}
           <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
             <p className="text-xs font-semibold text-slate-400">
               Média diária de focos
@@ -295,74 +370,110 @@ const MapaPage = () => {
               {Math.round(stats.diasPeriodo)} dias no período filtrado.
             </p>
           </div>
-        </div>
 
-        {/* Top 10 municípios */}
-        <section className="mt-8">
-          <div className="mb-3 flex items-center gap-3">
-            <h2 className="text-xl font-semibold">
-              Top 10 municípios com mais focos de queimadas
-            </h2>
-
-            {topMunicipios.length > 0 && (
-              <div className="ml-auto flex items-center gap-2 text-xs">
-                <span className="text-slate-400">Ordenar:</span>
-                <button
-                  type="button"
-                  onClick={() => setSortDirection("desc")}
-                  className={`rounded-md border px-2 py-1 ${
-                    sortDirection === "desc"
-                      ? "border-emerald-400 bg-emerald-400/10 text-emerald-300"
-                      : "border-slate-700 text-slate-300 hover:border-slate-500"
-                  }`}
-                >
-                  Maior → menor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSortDirection("asc")}
-                  className={`rounded-md border px-2 py-1 ${
-                    sortDirection === "asc"
-                      ? "border-emerald-400 bg-emerald-400/10 text-emerald-300"
-                      : "border-slate-700 text-slate-300 hover:border-slate-500"
-                  }`}
-                >
-                  Menor → maior
-                </button>
-              </div>
+          {/* Mês com maior número de focos no ano */}
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+            <p className="text-xs font-semibold text-slate-400">
+              Mês com maior número de focos no ano
+            </p>
+            {mesComMaisFocos ? (
+              <>
+                <p className="mt-2 text-xl font-bold text-slate-50">
+                  {
+                    mesesLabels.find((m) => m.value === mesComMaisFocos.mes)
+                      ?.label
+                  }
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {mesComMaisFocos.total.toLocaleString("pt-BR")} focos em{" "}
+                  {
+                    mesesLabels.find((m) => m.value === mesComMaisFocos.mes)
+                      ?.label
+                  }{" "}
+                  de {ano}, considerando todo o ano.
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-slate-400">
+                Não há dados suficientes para o ano selecionado.
+              </p>
             )}
           </div>
 
-          <p className="mb-3 text-xs text-slate-400">
-            Gráfico baseado nos filtros selecionados de ano e mês.
+          {/* Município com mais focos no período filtrado */}
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+            <p className="text-xs font-semibold text-slate-400">
+              Município com mais focos no período filtrado
+            </p>
+            {municipioComMaisFocos ? (
+              <>
+                <p className="mt-2 text-xl font-bold text-slate-50">
+                  {municipioComMaisFocos.city}
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {municipioComMaisFocos.total.toLocaleString("pt-BR")} focos no
+                  período selecionado (ano {ano}
+                  {mes === 0
+                    ? ", todos os meses."
+                    : `, mês ${
+                        mesesLabels.find((m) => m.value === mes)?.label ?? ""
+                      }.`}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-slate-400">
+                Nenhum foco encontrado para o período selecionado.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* GRÁFICO DE LINHAS - FOCOS POR MÊS NO ANO SELECIONADO */}
+        <section className="mt-6">
+          <h2 className="mb-2 text-xl font-semibold">
+            Distribuição mensal de focos em {ano}
+          </h2>
+          <p className="mb-3 max-w-3xl text-xs text-slate-400">
+            O gráfico abaixo mostra a quantidade de focos registrados em cada
+            mês do ano selecionado, considerando todo o estado de Goiás. Ele
+            ajuda a identificar a sazonalidade das queimadas ao longo do ano.
           </p>
 
-          {topMunicipios.length === 0 ? (
-            <p className="text-sm text-slate-400">
-              Nenhum foco encontrado para o período selecionado.
-            </p>
-          ) : (
-            <div className="h-80 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+          <div className="h-72 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+            {dadosMensais.every((d) => d.total === 0) ? (
+              <p className="text-sm text-slate-400">
+                Nenhum foco registrado ao longo dos meses para o ano
+                selecionado.
+              </p>
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={topMunicipios}
-                  layout="vertical"
-                  margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                <LineChart
+                  data={dadosMensais}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  {/* Eixo Y = municípios */}
-                  <YAxis
-                    type="category"
-                    dataKey="city"
-                    width={140}
-                    tick={{ fontSize: 11, fill: "#e5e7eb" }}
-                  />
-                  {/* Eixo X = quantidade de focos */}
                   <XAxis
-                    type="number"
+                    dataKey="mes"
                     tick={{ fontSize: 11, fill: "#e5e7eb" }}
+                    tickFormatter={(value: number) =>
+                      mesesLabels.find((m) => m.value === value)?.label ??
+                      String(value)
+                    }
+                    interval={0}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#e5e7eb" }}
+                    allowDecimals={false}
                   />
                   <RechartsTooltip
+                    formatter={(value: number) => [
+                      value.toLocaleString("pt-BR"),
+                      "Total de focos",
+                    ]}
+                    labelFormatter={(mes: number) =>
+                      mesesLabels.find((m) => m.value === mes)?.label ??
+                      `Mês ${mes}`
+                    }
                     contentStyle={{
                       backgroundColor: "#020617",
                       border: "1px solid #1f2937",
@@ -370,18 +481,19 @@ const MapaPage = () => {
                       fontSize: "0.75rem",
                       color: "#e5e7eb",
                     }}
-                    cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
                   />
-                  <Bar
+                  <Line
+                    type="monotone"
                     dataKey="total"
-                    name="Focos"
-                    radius={[0, 4, 4, 0]}
-                    fill="#4ADE80"
+                    stroke="#60a5fa"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    name="Total de focos"
                   />
-                </BarChart>
+                </LineChart>
               </ResponsiveContainer>
-            </div>
-          )}
+            )}
+          </div>
         </section>
       </section>
 

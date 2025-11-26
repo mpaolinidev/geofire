@@ -60,7 +60,7 @@ export default function Home() {
           >
             <div className="relative h-64 w-full">
               <Image
-                src="/map-preview.jpg"
+                src="/mapa.png"
                 alt="Pré-visualização do mapa de queimadas em Goiás"
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -88,7 +88,7 @@ export default function Home() {
           >
             <div className="relative h-64 w-full">
               <Image
-                src="/serie-preview.jpg"
+                src="/serie-historica1.png"
                 alt="Pré-visualização da série histórica de queimadas"
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
