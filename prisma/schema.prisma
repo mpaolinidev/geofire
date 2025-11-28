@@ -28,3 +28,28 @@ model Queimadas {
   source_file String
   csv_file    String
 }
+
+model Municipios {
+  Cod_UF                    String?
+  UF                        String?
+  Cod_Regiao_Intermediaria String?
+  Regiao_Intermediaria     String?
+  Cod_Regiao_Imediata      String?
+  Regiao_Imediata          String?
+  Cod_Mesorregiao          String?
+  Mesorregiao              String?
+  Cod_Microrregiao         String?
+  Microrregiao             String?
+  Cod_Munic_Comp           String @id
+  Municipio                String?
+  Regiao_Planejamento      String?
+  latitude                 String?
+  longitude                String?
+  COD_MUNIC_6              String?
+  AREA                     String?
+  COD_MUNIC_4              String?
+  RIDE                     String?
+  REGIONAL_IEL             String?
+  Capital                  String?
+  MACROREGIAO              String?
+}
